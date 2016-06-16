@@ -129,9 +129,20 @@ class SpotifyOAuth(object):
                 f.close()
                 token_info = json.loads(token_info_string)
 
-                # if scopes don't match, then bail
-                if 'scope' not in token_info or self.scope != token_info['scope']:
+                if 'scope' not in token_info:
                     return None
+
+                requested_scope_set = set(self.scope.split())
+                cached_set = set(token_info['scope'].split())
+
+                if requested_scope_set > cached_set or \
+                        set.isdisjoint(requested_scope_set, cached_set):
+                    return None
+
+                if requested_scope_set < cached_set:
+                    # set to the requested scope in case callers
+                    # are testing against it
+                    token_info['scope'] = self.scope
 
                 if self._is_token_expired(token_info):
                     token_info = self._refresh_access_token(token_info['refresh_token'])
